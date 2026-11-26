@@ -1,0 +1,74 @@
+<?php
+declare(strict_types=1);
+
+require __DIR__ . '/../src/TaskStore.php';
+session_start();
+$_SESSION['csrf'] ??= bin2hex(random_bytes(32));
+$directory = __DIR__ . '/../var';
+if (!is_dir($directory) && !mkdir($directory, 0770, true) && !is_dir($directory)) {
+    throw new RuntimeException('No se pudo crear el directorio de datos.');
+}
+$store = new TaskStore(new PDO('sqlite:' . $directory . '/tasks.sqlite'));
+$error = '';
+$title = '';
+$description = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (!isset($_POST['csrf']) || !is_string($_POST['csrf']) || !hash_equals($_SESSION['csrf'], $_POST['csrf'])) {
+        http_response_code(403);
+        exit('La sesión del formulario ha caducado. Recarga la página e inténtalo de nuevo.');
+    }
+    $title = is_string($_POST['title'] ?? null) ? $_POST['title'] : '';
+    $description = is_string($_POST['description'] ?? null) ? $_POST['description'] : '';
+    try {
+        $store->create($title, $description);
+        header('Location: /', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        $error = $exception->getMessage();
+        http_response_code(422);
+    }
+}
+function escape(string $value): string
+{
+    return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+}
+$tasks = $store->all();
+?>
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mis tareas</title>
+</head>
+<body>
+<main>
+    <h1>Mis tareas</h1>
+    <p>Un espacio sencillo para organizar lo que sigue.</p>
+    <section>
+        <h2>Nueva tarea</h2>
+        <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
+        <form method="post">
+            <input type="hidden" name="csrf" value="<?= escape($_SESSION['csrf']) ?>">
+            <label for="title">Título</label>
+            <input id="title" name="title" maxlength="120" required value="<?= escape($title) ?>">
+            <label for="description">Descripción</label>
+            <textarea id="description" name="description" maxlength="5000"><?= escape($description) ?></textarea>
+            <button type="submit">Crear tarea</button>
+        </form>
+    </section>
+    <section>
+        <h2>Lista de tareas</h2>
+        <?php if (!$tasks): ?>
+            <p>Aún no hay tareas. Crea la primera con el formulario.</p>
+        <?php else: ?>
+            <ul>
+                <?php foreach ($tasks as $task): ?>
+                    <li><strong><?= escape($task['title']) ?></strong></li>
+                <?php endforeach; ?>
+            </ul>
+        <?php endif; ?>
+    </section>
+</main>
+</body>
+</html>
