@@ -40,4 +40,8 @@ try {
 } catch (InvalidArgumentException $exception) {
     check($store->find($id)['title'] === 'Nueva tarea', 'Invalid edits do not change the stored task');
 }
+check(method_exists($store, 'delete'), 'Tasks can be deleted');
+check(!$store->delete(999), 'Deleting a missing task reports failure');
+check($store->delete($id), 'An existing task can be deleted');
+check($store->find($id) === null && $store->all() === [], 'Deleted tasks no longer appear');
 echo "Task tests passed\n";
