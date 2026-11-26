@@ -35,6 +35,14 @@ final class TaskStore
         return (int) $this->db->lastInsertId();
     }
 
+    public function update(int $id, string $title, string $description): bool
+    {
+        [$title, $description] = $this->validate($title, $description);
+        $statement = $this->db->prepare('UPDATE tasks SET title = :title, description = :description WHERE id = :id');
+        $statement->execute(['id' => $id, 'title' => $title, 'description' => $description]);
+        return $statement->rowCount() > 0;
+    }
+
     private function validate(string $title, string $description): array
     {
         $title = trim($title);

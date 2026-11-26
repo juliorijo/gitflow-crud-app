@@ -30,4 +30,14 @@ check(method_exists($store, 'find'), 'Tasks can be retrieved individually');
 $task = $store->find($id);
 check($task !== null && $task['description'] === 'Revisar el proyecto', 'Task detail includes its description');
 check($store->find(999) === null, 'A missing task has no detail');
+check(method_exists($store, 'update'), 'Tasks can be updated');
+check($store->update($id, '  Nueva tarea  ', 'Actualizada'), 'An existing task can be updated');
+check($store->find($id)['title'] === 'Nueva tarea', 'The updated title is saved');
+check(!$store->update(999, 'Ausente', ''), 'Updating a missing task reports failure');
+try {
+    $store->update($id, ' ', '');
+    throw new RuntimeException('An empty updated title was accepted');
+} catch (InvalidArgumentException $exception) {
+    check($store->find($id)['title'] === 'Nueva tarea', 'Invalid edits do not change the stored task');
+}
 echo "Task tests passed\n";
