@@ -19,6 +19,14 @@ final class TaskStore
         return $this->db->query('SELECT * FROM tasks ORDER BY id DESC')->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    public function find(int $id): ?array
+    {
+        $statement = $this->db->prepare('SELECT * FROM tasks WHERE id = :id');
+        $statement->execute(['id' => $id]);
+        $task = $statement->fetch(PDO::FETCH_ASSOC);
+        return $task === false ? null : $task;
+    }
+
     public function create(string $title, string $description): int
     {
         [$title, $description] = $this->validate($title, $description);
