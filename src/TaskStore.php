@@ -43,6 +43,13 @@ final class TaskStore
         return $statement->rowCount() > 0;
     }
 
+    public function delete(int $id): bool
+    {
+        $statement = $this->db->prepare('DELETE FROM tasks WHERE id = :id');
+        $statement->execute(['id' => $id]);
+        return $statement->rowCount() > 0;
+    }
+
     private function validate(string $title, string $description): array
     {
         $title = trim($title);

@@ -20,16 +20,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = is_string($_POST['title'] ?? null) ? $_POST['title'] : '';
     $description = is_string($_POST['description'] ?? null) ? $_POST['description'] : '';
     try {
-        if (($_POST['action'] ?? '') === 'update') {
+        $action = $_POST['action'] ?? 'create';
+        if ($action === 'update' || $action === 'delete') {
             $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-            if ($id === false || $id === null || !$store->update($id, $title, $description)) {
+            if ($id === false || $id === null) {
                 http_response_code(404);
                 exit('Tarea no encontrada.');
             }
-            $destination = '/?id=' . $id;
-        } else {
+            $changed = $action === 'update'
+                ? $store->update($id, $title, $description)
+                : $store->delete($id);
+            if (!$changed) {
+                http_response_code(404);
+                exit('Tarea no encontrada.');
+            }
+            $destination = $action === 'update' ? '/?id=' . $id : '/';
+        } elseif ($action === 'create') {
             $store->create($title, $description);
             $destination = '/';
+        } else {
+            http_response_code(400);
+            exit('Acción no válida.');
         }
         header('Location: ' . $destination, true, 303);
         exit;
@@ -53,6 +64,7 @@ if ($showDetail) {
     }
 }
 $editing = $detail !== null && isset($_GET['edit']);
+$confirmDelete = $detail !== null && isset($_GET['delete']);
 if ($editing && $error === '') {
     $title = $detail['title'];
     $description = $detail['description'];
@@ -73,6 +85,16 @@ if ($editing && $error === '') {
     <section>
         <?php if ($detail === null): ?>
             <h2>Tarea no encontrada</h2>
+        <?php elseif ($confirmDelete): ?>
+            <h2>Eliminar tarea</h2>
+            <p>¿Eliminar «<?= escape($detail['title']) ?>»? Esta acción no se puede deshacer.</p>
+            <form method="post">
+                <input type="hidden" name="csrf" value="<?= escape($_SESSION['csrf']) ?>">
+                <input type="hidden" name="action" value="delete">
+                <input type="hidden" name="id" value="<?= (int) $detail['id'] ?>">
+                <button type="submit">Eliminar definitivamente</button>
+            </form>
+            <a href="/?id=<?= (int) $detail['id'] ?>">Cancelar</a>
         <?php elseif ($editing): ?>
             <h2>Editar tarea</h2>
             <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
@@ -91,6 +113,7 @@ if ($editing && $error === '') {
             <p><?= nl2br(escape($detail['description'])) ?></p>
             <p>Creada: <?= escape($detail['created_at']) ?> UTC</p>
             <a href="/?id=<?= (int) $detail['id'] ?>&amp;edit=1">Editar tarea</a>
+            <a href="/?id=<?= (int) $detail['id'] ?>&amp;delete=1">Eliminar tarea</a>
         <?php endif; ?>
         <a href="/">Volver a la lista</a>
     </section>
