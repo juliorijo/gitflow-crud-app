@@ -26,6 +26,14 @@ try {
 } catch (InvalidArgumentException $exception) {
     check($exception->getMessage() !== '', 'Validation explains the error');
 }
+foreach ([[str_repeat('a', 121), ''], ['Válida', str_repeat('a', 5001)], ["\xFF", '']] as [$invalidTitle, $invalidDescription]) {
+    try {
+        $store->create($invalidTitle, $invalidDescription);
+        throw new RuntimeException('Invalid task input was accepted');
+    } catch (InvalidArgumentException $exception) {
+        check(count($store->all()) === 1, 'Invalid input does not create a task');
+    }
+}
 check(method_exists($store, 'find'), 'Tasks can be retrieved individually');
 $task = $store->find($id);
 check($task !== null && $task['description'] === 'Revisar el proyecto', 'Task detail includes its description');
