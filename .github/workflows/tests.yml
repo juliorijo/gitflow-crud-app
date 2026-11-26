@@ -12,4 +12,4 @@ jobs:
         with:
           php-version: '8.3'
           extensions: pdo_sqlite
-      - run: php -l src/TaskStore.php && php -l public/index.php && php tests/tasks.php
+      - run: php -l src/TaskStore.php && php -l public/index.php && php tests/tasks.php && php tests/http.php

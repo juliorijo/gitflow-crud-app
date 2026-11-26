@@ -54,6 +54,9 @@ final class TaskStore
     {
         $title = trim($title);
         $description = trim($description);
+        if (preg_match('//u', $title) !== 1 || preg_match('//u', $description) !== 1) {
+            throw new InvalidArgumentException('El texto debe estar codificado en UTF-8.');
+        }
         if ($title === '' || iconv_strlen($title, 'UTF-8') > 120) {
             throw new InvalidArgumentException('El título es obligatorio y no puede superar 120 caracteres.');
         }

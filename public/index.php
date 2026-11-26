@@ -35,9 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 exit('Tarea no encontrada.');
             }
             $destination = $action === 'update' ? '/?id=' . $id : '/';
+            $_SESSION['notice'] = $action === 'update' ? 'Cambios guardados.' : 'Tarea eliminada.';
         } elseif ($action === 'create') {
             $store->create($title, $description);
             $destination = '/';
+            $_SESSION['notice'] = 'Tarea creada.';
         } else {
             http_response_code(400);
             exit('Acción no válida.');
@@ -65,6 +67,8 @@ if ($showDetail) {
 }
 $editing = $detail !== null && isset($_GET['edit']);
 $confirmDelete = $detail !== null && isset($_GET['delete']);
+$notice = $_SESSION['notice'] ?? '';
+unset($_SESSION['notice']);
 if ($editing && $error === '') {
     $title = $detail['title'];
     $description = $detail['description'];
@@ -76,13 +80,18 @@ if ($editing && $error === '') {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Mis tareas</title>
+    <link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <main>
-    <h1>Mis tareas</h1>
-    <p>Un espacio sencillo para organizar lo que sigue.</p>
+    <header>
+        <p class="brand">Mis tareas</p>
+        <h1>Haz espacio para lo importante.</h1>
+        <p>Un lugar sencillo para organizar lo que sigue.</p>
+    </header>
+    <?php if ($notice !== ''): ?><p class="notice" role="status"><?= escape($notice) ?></p><?php endif; ?>
     <?php if ($showDetail): ?>
-    <section>
+    <section class="panel detail">
         <?php if ($detail === null): ?>
             <h2>Tarea no encontrada</h2>
         <?php elseif ($confirmDelete): ?>
@@ -97,7 +106,7 @@ if ($editing && $error === '') {
             <a href="/?id=<?= (int) $detail['id'] ?>">Cancelar</a>
         <?php elseif ($editing): ?>
             <h2>Editar tarea</h2>
-            <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
+            <?php if ($error !== ''): ?><p class="error" role="alert"><?= escape($error) ?></p><?php endif; ?>
             <form method="post">
                 <input type="hidden" name="csrf" value="<?= escape($_SESSION['csrf']) ?>">
                 <input type="hidden" name="action" value="update">
@@ -112,15 +121,19 @@ if ($editing && $error === '') {
             <h2><?= escape($detail['title']) ?></h2>
             <p><?= nl2br(escape($detail['description'])) ?></p>
             <p>Creada: <?= escape($detail['created_at']) ?> UTC</p>
-            <a href="/?id=<?= (int) $detail['id'] ?>&amp;edit=1">Editar tarea</a>
-            <a href="/?id=<?= (int) $detail['id'] ?>&amp;delete=1">Eliminar tarea</a>
+            <div class="actions">
+                <a href="/?id=<?= (int) $detail['id'] ?>&amp;edit=1">Editar tarea</a>
+                <a href="/?id=<?= (int) $detail['id'] ?>&amp;delete=1">Eliminar tarea</a>
+            </div>
         <?php endif; ?>
         <a href="/">Volver a la lista</a>
     </section>
     <?php else: ?>
-    <section>
+    <div class="workspace">
+    <section class="panel">
         <h2>Nueva tarea</h2>
-        <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
+        <p>Empieza por un título. La descripción es opcional.</p>
+        <?php if ($error !== ''): ?><p class="error" role="alert"><?= escape($error) ?></p><?php endif; ?>
         <form method="post">
             <input type="hidden" name="csrf" value="<?= escape($_SESSION['csrf']) ?>">
             <label for="title">Título</label>
@@ -130,18 +143,19 @@ if ($editing && $error === '') {
             <button type="submit">Crear tarea</button>
         </form>
     </section>
-    <section>
-        <h2>Lista de tareas</h2>
+    <section class="panel">
+        <h2>Lista de tareas <span class="count"><?= count($tasks) ?></span></h2>
         <?php if (!$tasks): ?>
             <p>Aún no hay tareas. Crea la primera con el formulario.</p>
         <?php else: ?>
-            <ul>
+            <ul class="task-list">
                 <?php foreach ($tasks as $task): ?>
-                    <li><a href="/?id=<?= (int) $task['id'] ?>"><?= escape($task['title']) ?></a></li>
+                    <li><a href="/?id=<?= (int) $task['id'] ?>"><?= escape($task['title']) ?><span>Ver detalle</span></a></li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
     </section>
+    </div>
     <?php endif; ?>
 </main>
 </body>
