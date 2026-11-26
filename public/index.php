@@ -20,8 +20,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = is_string($_POST['title'] ?? null) ? $_POST['title'] : '';
     $description = is_string($_POST['description'] ?? null) ? $_POST['description'] : '';
     try {
-        $store->create($title, $description);
-        header('Location: /', true, 303);
+        if (($_POST['action'] ?? '') === 'update') {
+            $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false || $id === null || !$store->update($id, $title, $description)) {
+                http_response_code(404);
+                exit('Tarea no encontrada.');
+            }
+            $destination = '/?id=' . $id;
+        } else {
+            $store->create($title, $description);
+            $destination = '/';
+        }
+        header('Location: ' . $destination, true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         $error = $exception->getMessage();
@@ -42,6 +52,11 @@ if ($showDetail) {
         http_response_code(404);
     }
 }
+$editing = $detail !== null && isset($_GET['edit']);
+if ($editing && $error === '') {
+    $title = $detail['title'];
+    $description = $detail['description'];
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -58,10 +73,24 @@ if ($showDetail) {
     <section>
         <?php if ($detail === null): ?>
             <h2>Tarea no encontrada</h2>
+        <?php elseif ($editing): ?>
+            <h2>Editar tarea</h2>
+            <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
+            <form method="post">
+                <input type="hidden" name="csrf" value="<?= escape($_SESSION['csrf']) ?>">
+                <input type="hidden" name="action" value="update">
+                <input type="hidden" name="id" value="<?= (int) $detail['id'] ?>">
+                <label for="title">Título</label>
+                <input id="title" name="title" maxlength="120" required value="<?= escape($title) ?>">
+                <label for="description">Descripción</label>
+                <textarea id="description" name="description" maxlength="5000"><?= escape($description) ?></textarea>
+                <button type="submit">Guardar cambios</button>
+            </form>
         <?php else: ?>
             <h2><?= escape($detail['title']) ?></h2>
             <p><?= nl2br(escape($detail['description'])) ?></p>
             <p>Creada: <?= escape($detail['created_at']) ?> UTC</p>
+            <a href="/?id=<?= (int) $detail['id'] ?>&amp;edit=1">Editar tarea</a>
         <?php endif; ?>
         <a href="/">Volver a la lista</a>
     </section>
