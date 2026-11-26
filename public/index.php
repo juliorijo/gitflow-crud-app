@@ -33,6 +33,15 @@ function escape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 $tasks = $store->all();
+$detail = null;
+$showDetail = array_key_exists('id', $_GET);
+if ($showDetail) {
+    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $detail = $id === false ? null : $store->find($id);
+    if ($detail === null) {
+        http_response_code(404);
+    }
+}
 ?>
 <!doctype html>
 <html lang="es">
@@ -45,6 +54,18 @@ $tasks = $store->all();
 <main>
     <h1>Mis tareas</h1>
     <p>Un espacio sencillo para organizar lo que sigue.</p>
+    <?php if ($showDetail): ?>
+    <section>
+        <?php if ($detail === null): ?>
+            <h2>Tarea no encontrada</h2>
+        <?php else: ?>
+            <h2><?= escape($detail['title']) ?></h2>
+            <p><?= nl2br(escape($detail['description'])) ?></p>
+            <p>Creada: <?= escape($detail['created_at']) ?> UTC</p>
+        <?php endif; ?>
+        <a href="/">Volver a la lista</a>
+    </section>
+    <?php else: ?>
     <section>
         <h2>Nueva tarea</h2>
         <?php if ($error !== ''): ?><p role="alert"><?= escape($error) ?></p><?php endif; ?>
@@ -64,11 +85,12 @@ $tasks = $store->all();
         <?php else: ?>
             <ul>
                 <?php foreach ($tasks as $task): ?>
-                    <li><strong><?= escape($task['title']) ?></strong></li>
+                    <li><a href="/?id=<?= (int) $task['id'] ?>"><?= escape($task['title']) ?></a></li>
                 <?php endforeach; ?>
             </ul>
         <?php endif; ?>
     </section>
+    <?php endif; ?>
 </main>
 </body>
 </html>
