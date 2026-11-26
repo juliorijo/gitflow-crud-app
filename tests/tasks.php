@@ -26,4 +26,8 @@ try {
 } catch (InvalidArgumentException $exception) {
     check($exception->getMessage() !== '', 'Validation explains the error');
 }
+check(method_exists($store, 'find'), 'Tasks can be retrieved individually');
+$task = $store->find($id);
+check($task !== null && $task['description'] === 'Revisar el proyecto', 'Task detail includes its description');
+check($store->find(999) === null, 'A missing task has no detail');
 echo "Task tests passed\n";
